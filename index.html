@@ -264,6 +264,39 @@
 		"type": "function"
 	}
 ];
+	async function operar(accion) {
+    const cantidad = document.getElementById('amountInput').value;
+    if (!cantidad || cantidad <= 0) return alert("Ingresa una cantidad válida");
+
+    try {
+        const status = document.getElementById('growthText');
+        status.innerText = "Procesando...";
+        
+        // Convertimos la cantidad a formato Blockchain (18 decimales)
+        const cantidadWei = ethers.utils.parseUnits(cantidad.toString(), 18);
+
+        let tx;
+        if (accion === 'comprar') {
+            // Nota: Aquí faltaría el APPROVE de USDT antes de comprar
+            tx = await brokerContract.comprarAcciones(cantidadWei);
+        } else {
+            // Nota: Aquí faltaría el APPROVE del TOKEN antes de vender
+            tx = await brokerContract.venderAlBroker(cantidadWei);
+        }
+
+        alert("Transacción enviada. Espera confirmación.");
+        await tx.wait();
+        alert("¡Operación exitosa!");
+        loadDashboard(); // Recarga los precios
+
+    } catch (error) {
+        console.error(error);
+        alert("Error: " + (error.data?.message || error.message));
+    }
+}
+
+// Vincula la función al objeto window para que el HTML la vea
+window.operar = operar;
 
     let provider, signer, brokerContract;
 
@@ -280,7 +313,7 @@
 
     async function loadDashboard() {
         const pRecompra = await brokerContract.precioRecompra();
-        const precioFriendly = ethers.utils.formatUnits(pRecompra, 6);
+        const precioFriendly = ethers.utils.formatUnits(pRecompra, 18);
         document.getElementById('priceLabel').innerText = `$${precioFriendly}`;
         // Aquí añadirías la lógica para leer balance de tokens del usuario
     }
@@ -307,6 +340,7 @@
 </script>
 </body>
 </html>
+
 
 
 
