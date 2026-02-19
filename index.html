@@ -24,7 +24,7 @@
 
 <div class="app-container">
     <div class="card">
-        <div class="balance-label">Valor de tu InversiÛn</div>
+        <div class="balance-label">Valor de tu Inversi√≥n</div>
         <div class="balance-amount" id="userValue">$0.00</div>
         <span class="growth-badge" id="growthText">+0.00% Total</span>
     </div>
@@ -47,10 +47,223 @@
 </div>
 
 <script>
-    // PAR¡METROS QUE DEBES EDITAR
-    const BROKER_ADDR = "DIRECCION_DE_TU_BROKER";
-    const TOKEN_ADDR = "DIRECCION_DE_TU_TOKEN";
-    const BROKER_ABI = [ /* Pega aquÌ el ABI del Broker */ ];
+    // PAR√ÅMETROS QUE DEBES EDITAR
+    const BROKER_ADDR = "0x501870Af2320fC83EC0DD30048eBB5b598B5e1Ed";
+    const TOKEN_ADDR = "0x8B066E93aB5Da75B7F8131570fc94b61ebd04e52";
+    const BROKER_ABI = [[
+	{
+		"inputs": [
+			{
+				"internalType": "uint256",
+				"name": "_venta",
+				"type": "uint256"
+			},
+			{
+				"internalType": "uint256",
+				"name": "_recompra",
+				"type": "uint256"
+			}
+		],
+		"name": "ajustarPrecios",
+		"outputs": [],
+		"stateMutability": "nonpayable",
+		"type": "function"
+	},
+	{
+		"inputs": [
+			{
+				"internalType": "uint256",
+				"name": "cantidad",
+				"type": "uint256"
+			}
+		],
+		"name": "comprarAcciones",
+		"outputs": [],
+		"stateMutability": "nonpayable",
+		"type": "function"
+	},
+	{
+		"inputs": [
+			{
+				"internalType": "address",
+				"name": "_token",
+				"type": "address"
+			},
+			{
+				"internalType": "address",
+				"name": "_stable",
+				"type": "address"
+			}
+		],
+		"stateMutability": "nonpayable",
+		"type": "constructor"
+	},
+	{
+		"inputs": [
+			{
+				"internalType": "address",
+				"name": "owner",
+				"type": "address"
+			}
+		],
+		"name": "OwnableInvalidOwner",
+		"type": "error"
+	},
+	{
+		"inputs": [
+			{
+				"internalType": "address",
+				"name": "account",
+				"type": "address"
+			}
+		],
+		"name": "OwnableUnauthorizedAccount",
+		"type": "error"
+	},
+	{
+		"anonymous": false,
+		"inputs": [
+			{
+				"indexed": true,
+				"internalType": "address",
+				"name": "previousOwner",
+				"type": "address"
+			},
+			{
+				"indexed": true,
+				"internalType": "address",
+				"name": "newOwner",
+				"type": "address"
+			}
+		],
+		"name": "OwnershipTransferred",
+		"type": "event"
+	},
+	{
+		"inputs": [],
+		"name": "renounceOwnership",
+		"outputs": [],
+		"stateMutability": "nonpayable",
+		"type": "function"
+	},
+	{
+		"inputs": [
+			{
+				"internalType": "uint256",
+				"name": "cantidad",
+				"type": "uint256"
+			}
+		],
+		"name": "retirarFondos",
+		"outputs": [],
+		"stateMutability": "nonpayable",
+		"type": "function"
+	},
+	{
+		"inputs": [
+			{
+				"internalType": "uint256",
+				"name": "cantidad",
+				"type": "uint256"
+			}
+		],
+		"name": "retirarTokens",
+		"outputs": [],
+		"stateMutability": "nonpayable",
+		"type": "function"
+	},
+	{
+		"inputs": [
+			{
+				"internalType": "address",
+				"name": "newOwner",
+				"type": "address"
+			}
+		],
+		"name": "transferOwnership",
+		"outputs": [],
+		"stateMutability": "nonpayable",
+		"type": "function"
+	},
+	{
+		"inputs": [
+			{
+				"internalType": "uint256",
+				"name": "cantidad",
+				"type": "uint256"
+			}
+		],
+		"name": "venderAlBroker",
+		"outputs": [],
+		"stateMutability": "nonpayable",
+		"type": "function"
+	},
+	{
+		"inputs": [],
+		"name": "owner",
+		"outputs": [
+			{
+				"internalType": "address",
+				"name": "",
+				"type": "address"
+			}
+		],
+		"stateMutability": "view",
+		"type": "function"
+	},
+	{
+		"inputs": [],
+		"name": "precioRecompra",
+		"outputs": [
+			{
+				"internalType": "uint256",
+				"name": "",
+				"type": "uint256"
+			}
+		],
+		"stateMutability": "view",
+		"type": "function"
+	},
+	{
+		"inputs": [],
+		"name": "precioVenta",
+		"outputs": [
+			{
+				"internalType": "uint256",
+				"name": "",
+				"type": "uint256"
+			}
+		],
+		"stateMutability": "view",
+		"type": "function"
+	},
+	{
+		"inputs": [],
+		"name": "stablecoin",
+		"outputs": [
+			{
+				"internalType": "contract IERC20",
+				"name": "",
+				"type": "address"
+			}
+		],
+		"stateMutability": "view",
+		"type": "function"
+	},
+	{
+		"inputs": [],
+		"name": "tokenAccion",
+		"outputs": [
+			{
+				"internalType": "contract IERC20",
+				"name": "",
+				"type": "address"
+			}
+		],
+		"stateMutability": "view",
+		"type": "function"
+	}
+]];
 
     let provider, signer, brokerContract;
 
@@ -69,7 +282,7 @@
         const pRecompra = await brokerContract.precioRecompra();
         const precioFriendly = ethers.utils.formatUnits(pRecompra, 6);
         document.getElementById('priceLabel').innerText = `$${precioFriendly}`;
-        // AquÌ aÒadirÌas la lÛgica para leer balance de tokens del usuario
+        // Aqu√≠ a√±adir√≠as la l√≥gica para leer balance de tokens del usuario
     }
 
     function renderChart() {
@@ -94,4 +307,5 @@
 </script>
 </body>
 </html>
+
 
