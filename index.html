@@ -3,112 +3,148 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Tobar Corp | Dashboard Pro</title>
+    <title>Tobar Corp | Dashboard Real-Time</title>
     <style>
-        :root { --neon: #00ff88; --bg: #050505; --card: #111; }
-        body { background: var(--bg); color: white; font-family: 'Segoe UI', Tahoma, sans-serif; margin: 0; padding: 20px; text-align: center; }
+        :root { --neon: #00ff88; --bg: #050505; --card: #111; --text: #888; }
+        body { background: var(--bg); color: white; font-family: 'Segoe UI', sans-serif; margin: 0; padding: 20px; text-align: center; }
         .container { max-width: 400px; margin: auto; }
         .card { background: var(--card); border: 1px solid #222; border-radius: 20px; padding: 20px; margin-bottom: 20px; box-shadow: 0 10px 30px rgba(0,0,0,0.5); }
         .balance { font-size: 2.5em; font-weight: bold; color: var(--neon); text-shadow: 0 0 10px rgba(0,255,136,0.3); }
-        .btn { width: 100%; padding: 15px; border-radius: 12px; border: none; font-weight: bold; cursor: pointer; transition: 0.3s; margin-top: 10px; }
-        .btn-main { background: var(--neon); color: black; text-transform: uppercase; }
+        .status-bar { font-size: 0.75em; color: yellow; background: rgba(255,255,0,0.1); padding: 10px; border-radius: 10px; margin-bottom: 15px; border: 1px solid rgba(255,255,0,0.2); }
+        .btn { width: 100%; padding: 15px; border-radius: 12px; border: none; font-weight: bold; cursor: pointer; transition: 0.3s; margin-top: 10px; text-transform: uppercase; }
+        .btn-main { background: var(--neon); color: black; }
         .btn-outline { background: transparent; border: 1px solid #444; color: white; }
-        input { width: 100%; padding: 12px; margin: 15px 0; background: #000; border: 1px solid #333; color: var(--neon); border-radius: 8px; text-align: center; box-sizing: border-box; }
-        
-        /* Gráfico SVG Manual (Sin librerías) */
-        .chart-svg { width: 100%; height: 100px; stroke: var(--neon); stroke-width: 3; fill: none; margin: 10px 0; }
-        
-        .roadmap { text-align: left; font-size: 0.8em; color: #888; border-left: 2px solid var(--neon); padding-left: 15px; }
-        #status { font-size: 0.7em; color: yellow; margin-bottom: 10px; }
+        input { width: 100%; padding: 12px; margin: 15px 0; background: #000; border: 1px solid #333; color: var(--neon); border-radius: 8px; text-align: center; box-sizing: border-box; font-size: 1.1em; }
+        .info-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-top: 15px; font-size: 0.8em; color: var(--text); }
+        .info-item { background: #1a1a1a; padding: 10px; border-radius: 10px; }
+        .chart-svg { width: 100%; height: 80px; stroke: var(--neon); stroke-width: 2; fill: none; margin: 10px 0; filter: drop-shadow(0 0 5px var(--neon)); }
     </style>
 </head>
 <body>
 
 <div class="container">
-    <div id="status">SISTEMA OFFLINE - CONECTE WALLET</div>
+    <div class="status-bar" id="status">SISTEMA OFFLINE - ESPERANDO CONEXIÓN</div>
+    
     <button class="btn btn-main" id="btnConectar" onclick="conectar()">CONECTAR BILLETERA</button>
 
     <div class="card">
-        <div style="opacity: 0.6; font-size: 0.9em;">Valor de tu Inversión</div>
+        <div style="opacity: 0.6; font-size: 0.9em; margin-bottom: 10px;">Valor Total de tu Inversión</div>
         <div class="balance" id="valTotal">$0.00</div>
-        <div style="color: var(--neon); font-size: 0.8em;">+15.4% este mes</div>
+        
+        <div class="info-grid">
+            <div class="info-item">PRECIO ACTN<br><strong id="precioACTN" style="color:white;">$0.0000</strong></div>
+            <div class="info-item">BALANCE ACTN<br><strong id="balanceTokens" style="color:white;">0.00</strong></div>
+        </div>
     </div>
 
     <div class="card">
-        <p style="margin:0; font-size: 0.8em; opacity: 0.5;">RENDIMIENTO HISTÓRICO</p>
+        <p style="margin:0; font-size: 0.7em; opacity: 0.5; letter-spacing: 2px;">GRÁFICO DE CRECIMIENTO</p>
         <svg class="chart-svg" viewBox="0 0 100 20">
-            <polyline points="0,20 20,15 40,18 60,10 80,12 100,2" />
+            <polyline id="chartLine" points="0,18 20,15 40,16 60,10 80,12 100,5" />
         </svg>
     </div>
 
     <div class="card">
         <h3 style="margin-top:0;">Operar Acciones</h3>
-        <input type="number" id="montoInput" placeholder="Cantidad TCT">
-        <button class="btn btn-main" onclick="operar('comprar')">COMPRAR ACCIONES</button>
+        <input type="number" id="montoInput" placeholder="Cantidad de ACTN">
+        <button class="btn btn-main" onclick="operar('comprar')">COMPRAR (Swap)</button>
         <button class="btn btn-outline" onclick="operar('vender')">VENDER AL BROKER</button>
     </div>
 
     <div class="card" style="text-align: left;">
-        <h4 style="margin-top:0; color: var(--neon);">🚀 ROADMAP 2024</h4>
-        <div class="roadmap">
-            <p><strong>Q3:</strong> Staking y Dividendos TCT.</p>
-            <p><strong>Q4:</strong> App Móvil Tobar Corp.</p>
-            <p style="opacity: 0.4;"><strong>2025:</strong> Tarjeta Crypto Física.</p>
+        <h4 style="margin:0 0 10px 0; color: var(--neon);">🚀 ROADMAP 2024</h4>
+        <div style="border-left: 2px solid var(--neon); padding-left: 15px; font-size: 0.8em; color: #666;">
+            <p><strong>Q3:</strong> Lanzamiento de Staking ACTN.</p>
+            <p><strong>Q4:</strong> Listado en DEX Uniswap.</p>
+            <p style="opacity: 0.4;"><strong>2025:</strong> Tarjeta Física Tobar Corp.</p>
         </div>
     </div>
 </div>
 
 <script>
-    // CONFIGURACIÓN (Sepolia)
+    // --- PARÁMETROS BLOCKCHAIN ---
     const BROKER = "0x501870Af2320fC83EC0DD30048eBB5b598B5e1Ed";
+    const TOKEN_ACTN = "0x8B066E93aB5Da75B7F8131570fc94b61ebd04e52";
     let account = null;
 
-    // 1. CONECTAR (Método Manual que ya funcionó)
+    // 1. CONEXIÓN Y CARGA DE DATOS REALES
     async function conectar() {
         if (window.ethereum) {
             try {
                 const accounts = await window.ethereum.request({ method: 'eth_requestAccounts' });
                 account = accounts[0];
-                document.getElementById('btnConectar').innerText = "WALLET: " + account.substring(0,6) + "...";
-                document.getElementById('status').innerText = "CONECTADO A SEPOLIA";
-                // Simulación de carga de balance
-                document.getElementById('valTotal').innerText = "$1,240.50";
+                document.getElementById('btnConectar').innerText = "CUENTA: " + account.substring(0,6) + "...";
+                document.getElementById('status').innerText = "CONECTADO - ACTUALIZANDO DATOS...";
+                
+                await cargarDatosBlockchain();
+                // Actualizar automáticamente cada 10 segundos
+                setInterval(cargarDatosBlockchain, 10000);
             } catch (e) { alert("Error: " + e.message); }
-        } else { alert("Usa Trust Wallet o MetaMask"); }
+        } else { alert("Abre esto en Trust Wallet o MetaMask"); }
     }
 
-    // 2. OPERAR (Llamada directa RPC sin librerías)
+    async function cargarDatosBlockchain() {
+        if (!account) return;
+        try {
+            // A. LEER PRECIO RECOMPRA (Selector: precioRecompra() -> 0x2475e11d)
+            const precioHex = await window.ethereum.request({
+                method: 'eth_call',
+                params: [{ to: BROKER, data: "0x2475e11d" }, "latest"]
+            });
+            const precio = Number(BigInt(precioHex)) / 1e6; // Suponiendo 6 decimales para el precio fUSD
+
+            // B. LEER BALANCE TOKENS (Selector: balanceOf(address) -> 0x70a08231)
+            const dataBalance = "0x70a08231" + account.substring(2).padStart(64, '0');
+            const balanceHex = await window.ethereum.request({
+                method: 'eth_call',
+                params: [{ to: TOKEN_ACTN, data: dataBalance }, "latest"]
+            });
+            const balanceTokens = Number(BigInt(balanceHex)) / 1e18; // 18 decimales
+
+            // ACTUALIZAR UI
+            document.getElementById('precioACTN').innerText = "$" + precio.toFixed(4);
+            document.getElementById('balanceTokens').innerText = balanceTokens.toFixed(2);
+            document.getElementById('valTotal').innerText = "$" + (balanceTokens * precio).toFixed(2);
+            document.getElementById('status').innerText = "DATOS ACTUALIZADOS EN VIVO (SEPOLIA)";
+            
+            // Efecto visual en el gráfico (cambio ligero)
+            const y = Math.floor(Math.random() * (10 - 2 + 1) + 2);
+            document.getElementById('chartLine').setAttribute("points", `0,18 20,15 40,16 60,10 80,12 100,${y}`);
+
+        } catch (e) {
+            console.error(e);
+            document.getElementById('status').innerText = "ERROR AL SINCRONIZAR BLOCKCHAIN";
+        }
+    }
+
+    // 2. OPERACIONES (COMPRAR / VENDER)
     async function operar(tipo) {
         const monto = document.getElementById('montoInput').value;
         if (!account) return conectar();
-        if (!monto) return alert("Ingresa cantidad");
+        if (!monto || monto <= 0) return alert("Ingresa una cantidad válida");
 
         try {
-            document.getElementById('status').innerText = "FIRMANDO EN TU CELULAR...";
+            document.getElementById('status').innerText = "ESPERANDO FIRMA EN TU CELULAR...";
             
-            // Selector de función manual:
-            // comprarAcciones(uint256) -> 0x4ed34958
-            // venderAlBroker(uint256) -> 0x444d412e
+            // Selectores: comprarAcciones(uint256) -> 0x4ed34958 | venderAlBroker(uint256) -> 0x444d412e
             const selector = (tipo === 'comprar') ? "0x4ed34958" : "0x444d412e";
             
-            // Convertir a Hexadecimal 18 decimales
+            // Formatear monto a 18 decimales en Hexadecimal
             const bigMonto = BigInt(Math.floor(monto * 1e18));
-            const data = selector + bigMonto.toString(16).padStart(64, '0');
-
-            const txParams = {
-                from: account,
-                to: BROKER,
-                data: data,
-                gas: "0x493E0" // 300,000 gas
-            };
+            const dataTx = selector + bigMonto.toString(16).padStart(64, '0');
 
             const txHash = await window.ethereum.request({
                 method: 'eth_sendTransaction',
-                params: [txParams],
+                params: [{ 
+                    from: account, 
+                    to: BROKER, 
+                    data: dataTx,
+                    gas: "0x493E0" // 300,000 gas aprox
+                }],
             });
 
-            alert("✅ TRANSACCIÓN ENVIADA\nHash: " + txHash);
-            document.getElementById('status').innerText = "TRANSACCIÓN ENVIADA";
+            alert("✅ TRANSACCIÓN ENVIADA AL NODO\nHash: " + txHash);
+            document.getElementById('status').innerText = "TRANSACCIÓN EN PROCESO...";
         } catch (e) {
             alert("Error: " + (e.message || "Rechazado"));
             document.getElementById('status').innerText = "OPERACIÓN CANCELADA";
