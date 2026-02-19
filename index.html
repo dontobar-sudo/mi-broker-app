@@ -4,7 +4,7 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Acciones App</title>
-    <script src="https://cdn.ethers.io/lib/ethers-5.2.umd.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com"></script>
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
     <style>
         :root { --p: #27ae60; --s: #2c3e50; --bg: #f4f7f6; }
@@ -264,40 +264,7 @@
 		"type": "function"
 	}
 ];
-	async function operar(accion) {
-    const cantidad = document.getElementById('amountInput').value;
-    if (!cantidad || cantidad <= 0) return alert("Ingresa una cantidad válida");
-
-    try {
-        const status = document.getElementById('growthText');
-        status.innerText = "Procesando...";
-        
-        // Convertimos la cantidad a formato Blockchain (18 decimales)
-        const cantidadWei = ethers.utils.parseUnits(cantidad.toString(), 18);
-
-        let tx;
-        if (accion === 'comprar') {
-            // Nota: Aquí faltaría el APPROVE de USDT antes de comprar
-            tx = await brokerContract.comprarAcciones(cantidadWei);
-        } else {
-            // Nota: Aquí faltaría el APPROVE del TOKEN antes de vender
-            tx = await brokerContract.venderAlBroker(cantidadWei);
-        }
-
-        alert("Transacción enviada. Espera confirmación.");
-        await tx.wait();
-        alert("¡Operación exitosa!");
-        loadDashboard(); // Recarga los precios
-
-    } catch (error) {
-        console.error(error);
-        alert("Error: " + (error.data?.message || error.message));
-    }
-}
-
-// Vincula la función al objeto window para que el HTML la vea
-window.operar = operar;
-
+	
     let provider, signer, brokerContract;
 
     async function init() {
@@ -336,10 +303,50 @@ window.operar = operar;
         });
     }
 
+	async function operar(tipo) {
+    // 1. Verificación de emergencia por si la librería falla al cargar
+    if (typeof ethers === 'undefined') {
+        alert("⚠️ Error Crítico: La librería Ethers no cargó. Revisa tu conexión o usa Chrome actualizado.");
+        return;
+    }
+
+    const cantidad = document.getElementById('amountInput').value;
+    if (!cantidad || cantidad <= 0) return alert("Ingresa una cantidad válida");
+
+    try {
+        document.getElementById('growthText').innerText = "⏳ PROCESANDO...";
+        
+        // Convertimos a unidades de 18 decimales (Wei)
+        const cantidadWei = ethers.utils.parseEther(cantidad.toString());
+
+        let tx;
+        if (tipo === 'comprar') {
+            status.innerText = "ESPERANDO FIRMA DE COMPRA...";
+            tx = await brokerContract.comprarAcciones(cantidadWei);
+        } else {
+            status.innerText = "ESPERANDO FIRMA DE VENTA...";
+            tx = await brokerContract.venderAlBroker(cantidadWei);
+        }
+
+        await tx.wait();
+        alert("✅ OPERACIÓN EXITOSA");
+        location.reload(); // Recarga para actualizar saldo
+
+    } catch (error) {
+        console.error(error);
+        document.getElementById('growthText').innerText = "❌ ERROR";
+        alert("FALLO: " + (error.reason || error.message || "Rechazado"));
+    }
+}
+
+// Esto asegura que el botón del HTML encuentre la función
+window.operar = operar;
+
     window.onload = init;
 </script>
 </body>
 </html>
+
 
 
 
