@@ -1,35 +1,120 @@
 <!DOCTYPE html>
-<html>
+<html lang="es">
 <head>
-    <title>Tobar Corp - TEST FINAL</title>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Tobar Corp | Dashboard Pro</title>
     <style>
-        body { background: #000; color: #0f8; font-family: monospace; text-align: center; padding-top: 100px; }
-        button { padding: 20px; background: #0f8; border: none; font-weight: bold; cursor: pointer; border-radius: 10px; width: 250px; }
-        #log { margin-top: 20px; color: yellow; font-size: 0.8rem; }
+        :root { --neon: #00ff88; --bg: #050505; --card: #111; }
+        body { background: var(--bg); color: white; font-family: 'Segoe UI', Tahoma, sans-serif; margin: 0; padding: 20px; text-align: center; }
+        .container { max-width: 400px; margin: auto; }
+        .card { background: var(--card); border: 1px solid #222; border-radius: 20px; padding: 20px; margin-bottom: 20px; box-shadow: 0 10px 30px rgba(0,0,0,0.5); }
+        .balance { font-size: 2.5em; font-weight: bold; color: var(--neon); text-shadow: 0 0 10px rgba(0,255,136,0.3); }
+        .btn { width: 100%; padding: 15px; border-radius: 12px; border: none; font-weight: bold; cursor: pointer; transition: 0.3s; margin-top: 10px; }
+        .btn-main { background: var(--neon); color: black; text-transform: uppercase; }
+        .btn-outline { background: transparent; border: 1px solid #444; color: white; }
+        input { width: 100%; padding: 12px; margin: 15px 0; background: #000; border: 1px solid #333; color: var(--neon); border-radius: 8px; text-align: center; box-sizing: border-box; }
+        
+        /* Gráfico SVG Manual (Sin librerías) */
+        .chart-svg { width: 100%; height: 100px; stroke: var(--neon); stroke-width: 3; fill: none; margin: 10px 0; }
+        
+        .roadmap { text-align: left; font-size: 0.8em; color: #888; border-left: 2px solid var(--neon); padding-left: 15px; }
+        #status { font-size: 0.7em; color: yellow; margin-bottom: 10px; }
     </style>
 </head>
 <body>
-    <h1>TOBAR CORP</h1>
-    <p>SISTEMA DE EMERGENCIA</p>
-    <button onclick="conectar()">CONECTAR BILLETERA</button>
-    <div id="log">Esperando...</div>
 
-    <script>
-        async function conectar() {
-            const log = document.getElementById('log');
-            if (typeof window.ethereum !== 'undefined') {
-                try {
-                    log.innerText = "SOLICITANDO ACCESO...";
-                    const accounts = await window.ethereum.request({ method: 'eth_requestAccounts' });
-                    log.innerText = "CONECTADO: " + accounts[0];
-                    alert("¡CONECTADO CON ÉXITO!\nTu wallet: " + accounts[0]);
-                } catch (e) {
-                    log.innerText = "ERROR: " + e.message;
-                }
-            } else {
-                alert("Abre esto DENTRO de Trust Wallet (Navegador) o instala MetaMask.");
-            }
+<div class="container">
+    <div id="status">SISTEMA OFFLINE - CONECTE WALLET</div>
+    <button class="btn btn-main" id="btnConectar" onclick="conectar()">CONECTAR BILLETERA</button>
+
+    <div class="card">
+        <div style="opacity: 0.6; font-size: 0.9em;">Valor de tu Inversión</div>
+        <div class="balance" id="valTotal">$0.00</div>
+        <div style="color: var(--neon); font-size: 0.8em;">+15.4% este mes</div>
+    </div>
+
+    <div class="card">
+        <p style="margin:0; font-size: 0.8em; opacity: 0.5;">RENDIMIENTO HISTÓRICO</p>
+        <svg class="chart-svg" viewBox="0 0 100 20">
+            <polyline points="0,20 20,15 40,18 60,10 80,12 100,2" />
+        </svg>
+    </div>
+
+    <div class="card">
+        <h3 style="margin-top:0;">Operar Acciones</h3>
+        <input type="number" id="montoInput" placeholder="Cantidad TCT">
+        <button class="btn btn-main" onclick="operar('comprar')">COMPRAR ACCIONES</button>
+        <button class="btn btn-outline" onclick="operar('vender')">VENDER AL BROKER</button>
+    </div>
+
+    <div class="card" style="text-align: left;">
+        <h4 style="margin-top:0; color: var(--neon);">🚀 ROADMAP 2024</h4>
+        <div class="roadmap">
+            <p><strong>Q3:</strong> Staking y Dividendos TCT.</p>
+            <p><strong>Q4:</strong> App Móvil Tobar Corp.</p>
+            <p style="opacity: 0.4;"><strong>2025:</strong> Tarjeta Crypto Física.</p>
+        </div>
+    </div>
+</div>
+
+<script>
+    // CONFIGURACIÓN (Sepolia)
+    const BROKER = "0x501870Af2320fC83EC0DD30048eBB5b598B5e1Ed";
+    let account = null;
+
+    // 1. CONECTAR (Método Manual que ya funcionó)
+    async function conectar() {
+        if (window.ethereum) {
+            try {
+                const accounts = await window.ethereum.request({ method: 'eth_requestAccounts' });
+                account = accounts[0];
+                document.getElementById('btnConectar').innerText = "WALLET: " + account.substring(0,6) + "...";
+                document.getElementById('status').innerText = "CONECTADO A SEPOLIA";
+                // Simulación de carga de balance
+                document.getElementById('valTotal').innerText = "$1,240.50";
+            } catch (e) { alert("Error: " + e.message); }
+        } else { alert("Usa Trust Wallet o MetaMask"); }
+    }
+
+    // 2. OPERAR (Llamada directa RPC sin librerías)
+    async function operar(tipo) {
+        const monto = document.getElementById('montoInput').value;
+        if (!account) return conectar();
+        if (!monto) return alert("Ingresa cantidad");
+
+        try {
+            document.getElementById('status').innerText = "FIRMANDO EN TU CELULAR...";
+            
+            // Selector de función manual:
+            // comprarAcciones(uint256) -> 0x4ed34958
+            // venderAlBroker(uint256) -> 0x444d412e
+            const selector = (tipo === 'comprar') ? "0x4ed34958" : "0x444d412e";
+            
+            // Convertir a Hexadecimal 18 decimales
+            const bigMonto = BigInt(Math.floor(monto * 1e18));
+            const data = selector + bigMonto.toString(16).padStart(64, '0');
+
+            const txParams = {
+                from: account,
+                to: BROKER,
+                data: data,
+                gas: "0x493E0" // 300,000 gas
+            };
+
+            const txHash = await window.ethereum.request({
+                method: 'eth_sendTransaction',
+                params: [txParams],
+            });
+
+            alert("✅ TRANSACCIÓN ENVIADA\nHash: " + txHash);
+            document.getElementById('status').innerText = "TRANSACCIÓN ENVIADA";
+        } catch (e) {
+            alert("Error: " + (e.message || "Rechazado"));
+            document.getElementById('status').innerText = "OPERACIÓN CANCELADA";
         }
-    </script>
+    }
+</script>
+
 </body>
 </html>
