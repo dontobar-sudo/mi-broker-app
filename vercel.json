@@ -5,7 +5,7 @@
       "headers": [
         {
           "key": "Content-Security-Policy",
-          "value": "default-src 'self' https: data: blob:; script-src 'self' 'unsafe-inline' 'unsafe-eval' https://cdnjs.cloudflare.com https://cdn.jsdelivr.net; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; connect-src 'self' https://*.walletconnect.com https://rpc.ankr.com https://eth-sepolia.g.alchemy.com; img-src 'self' data: https:; frame-src 'self' https://verify.walletconnect.com;"
+          "value": "default-src 'self' https: data: blob:; script-src 'self' 'unsafe-inline' 'unsafe-eval' https://cdnjs.cloudflare.com https://cdn.jsdelivr.net https://cdn.ethers.io; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; connect-src 'self' https://*.walletconnect.com https://rpc.ankr.com https://eth-sepolia.g.alchemy.com; img-src 'self' data: https:; frame-src 'self' https://verify.walletconnect.com;"
         }
       ]
     }
