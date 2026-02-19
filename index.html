@@ -1,49 +1,35 @@
 <!DOCTYPE html>
-<html lang="es">
+<html>
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Tobar Inversiones | Dashboard</title>
-    
-    <!-- Librerías Externas -->
-    <script src="https://cdnjs.cloudflare.com" defer></script>
-    <script src="https://cdn.jsdelivr.net" defer></script>
-    
-    <!-- Tu lógica separada -->
-    <script src="app.js" defer></script>
-
+    <title>Tobar Corp - TEST FINAL</title>
     <style>
-        :root { --p: #27ae60; --bg: #0b0f1a; --card: #161c2d; }
-        body { font-family: 'Segoe UI', sans-serif; background: var(--bg); color: white; text-align: center; padding: 20px; margin: 0; }
-        .app-container { max-width: 450px; margin: auto; }
-        .card { background: var(--card); border-radius: 20px; padding: 20px; margin-bottom: 20px; border: 1px solid #2d3748; box-shadow: 0 4px 15px rgba(0,0,0,0.3); }
-        .balance-amount { font-size: 2.2em; font-weight: bold; color: var(--p); margin: 10px 0; }
-        .btn { width: 100%; padding: 15px; border: none; border-radius: 12px; font-weight: bold; cursor: pointer; transition: 0.3s; margin-top: 10px; }
-        input { width: 100%; padding: 12px; border: 1px solid #2d3748; border-radius: 10px; margin: 10px 0; background: #0b0f1a; color: white; box-sizing: border-box; text-align: center; }
+        body { background: #000; color: #0f8; font-family: monospace; text-align: center; padding-top: 100px; }
+        button { padding: 20px; background: #0f8; border: none; font-weight: bold; cursor: pointer; border-radius: 10px; width: 250px; }
+        #log { margin-top: 20px; color: yellow; font-size: 0.8rem; }
     </style>
 </head>
 <body>
+    <h1>TOBAR CORP</h1>
+    <p>SISTEMA DE EMERGENCIA</p>
+    <button onclick="conectar()">CONECTAR BILLETERA</button>
+    <div id="log">Esperando...</div>
 
-<div class="app-container">
-    <button class="btn" id="btnConnect" style="background:#3182ce; color:white;">CONECTAR BILLETERA</button>
-
-    <div class="card">
-        <div style="opacity: 0.7;">Valor de tu Inversión</div>
-        <div class="balance-amount" id="userValue">$0.00</div>
-        <div id="tokenBalance" style="font-size: 0.8em; color: #4a5568;">Acciones: 0.00 TCT</div>
-    </div>
-
-    <div class="card">
-        <canvas id="mainChart" height="200"></canvas>
-    </div>
-
-    <div class="card">
-        <h3>Operar</h3>
-        <input type="number" id="amountInput" placeholder="Cantidad TCT">
-        <button class="btn" id="btnBuy" style="background:var(--p); color:white;">COMPRAR ACCIONES</button>
-        <button class="btn" id="btnSell" style="background:transparent; border:1px solid #4a5568; color:white;">VENDER AL BROKER</button>
-    </div>
-</div>
-
+    <script>
+        async function conectar() {
+            const log = document.getElementById('log');
+            if (typeof window.ethereum !== 'undefined') {
+                try {
+                    log.innerText = "SOLICITANDO ACCESO...";
+                    const accounts = await window.ethereum.request({ method: 'eth_requestAccounts' });
+                    log.innerText = "CONECTADO: " + accounts[0];
+                    alert("¡CONECTADO CON ÉXITO!\nTu wallet: " + accounts[0]);
+                } catch (e) {
+                    log.innerText = "ERROR: " + e.message;
+                }
+            } else {
+                alert("Abre esto DENTRO de Trust Wallet (Navegador) o instala MetaMask.");
+            }
+        }
+    </script>
 </body>
 </html>
