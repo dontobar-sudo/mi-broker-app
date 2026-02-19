@@ -1,0 +1,97 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Acciones App</title>
+    <script src="https://cdn.ethers.io/lib/ethers-5.2.umd.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <style>
+        :root { --p: #27ae60; --s: #2c3e50; --bg: #f4f7f6; }
+        body { font-family: 'Segoe UI', sans-serif; background: var(--bg); margin: 0; padding: 20px; color: var(--s); }
+        .app-container { max-width: 500px; margin: auto; }
+        .card { background: white; border-radius: 20px; padding: 20px; box-shadow: 0 10px 20px rgba(0,0,0,0.05); margin-bottom: 20px; }
+        .balance-label { font-size: 0.9em; opacity: 0.7; }
+        .balance-amount { font-size: 2em; font-weight: bold; margin: 5px 0; }
+        .growth-badge { background: rgba(39,174,96,0.1); color: var(--p); padding: 5px 10px; border-radius: 20px; font-size: 0.8em; }
+        .btn { width: 100%; padding: 15px; border: none; border-radius: 12px; font-weight: bold; cursor: pointer; transition: 0.3s; margin-top: 10px; }
+        .btn-buy { background: var(--p); color: white; }
+        .btn-sell { background: white; color: var(--s); border: 2px solid var(--s); }
+        input { width: 100%; padding: 12px; border: 1px solid #ddd; border-radius: 10px; margin: 10px 0; box-sizing: border-box; }
+    </style>
+</head>
+<body>
+
+<div class="app-container">
+    <div class="card">
+        <div class="balance-label">Valor de tu Inversión</div>
+        <div class="balance-amount" id="userValue">$0.00</div>
+        <span class="growth-badge" id="growthText">+0.00% Total</span>
+    </div>
+
+    <div class="card">
+        <canvas id="mainChart" height="200"></canvas>
+    </div>
+
+    <div class="card">
+        <h3>Operar</h3>
+        <p style="font-size: 0.8em;">Precio Actual: <strong id="priceLabel">$0.00</strong></p>
+        <input type="number" id="amountInput" placeholder="Cantidad de Acciones">
+        <button class="btn btn-buy" onclick="operar('comprar')">Comprar Acciones</button>
+        <button class="btn btn-sell" onclick="operar('vender')">Vender al Broker</button>
+    </div>
+
+    <div style="text-align: center;">
+        <a id="explorerLink" href="#" target="_blank" style="color: #999; font-size: 0.8em; text-decoration: none;">Ver Transacciones en Explorer ?</a>
+    </div>
+</div>
+
+<script>
+    // PARÁMETROS QUE DEBES EDITAR
+    const BROKER_ADDR = "DIRECCION_DE_TU_BROKER";
+    const TOKEN_ADDR = "DIRECCION_DE_TU_TOKEN";
+    const BROKER_ABI = [ /* Pega aquí el ABI del Broker */ ];
+
+    let provider, signer, brokerContract;
+
+    async function init() {
+        if (window.ethereum) {
+            provider = new ethers.providers.Web3Provider(window.ethereum);
+            await provider.send("eth_requestAccounts", []);
+            signer = provider.getSigner();
+            brokerContract = new ethers.Contract(BROKER_ADDR, BROKER_ABI, signer);
+            loadDashboard();
+            renderChart();
+        }
+    }
+
+    async function loadDashboard() {
+        const pRecompra = await brokerContract.precioRecompra();
+        const precioFriendly = ethers.utils.formatUnits(pRecompra, 6);
+        document.getElementById('priceLabel').innerText = `$${precioFriendly}`;
+        // Aquí añadirías la lógica para leer balance de tokens del usuario
+    }
+
+    function renderChart() {
+        const ctx = document.getElementById('mainChart').getContext('2d');
+        new Chart(ctx, {
+            type: 'line',
+            data: {
+                labels: ['Sem 1', 'Sem 2', 'Sem 3', 'Sem 4'],
+                datasets: [{
+                    data: [1.00, 1.05, 1.15, 1.20],
+                    borderColor: '#27ae60',
+                    tension: 0.4,
+                    fill: true,
+                    backgroundColor: 'rgba(39, 174, 96, 0.05)'
+                }]
+            },
+            options: { plugins: { legend: { display: false } } }
+        });
+    }
+
+    window.onload = init;
+</script>
+</body>
+</html>
+
