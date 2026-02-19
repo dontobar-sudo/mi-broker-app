@@ -3,351 +3,124 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Acciones App</title>
+    <title>Tobar Inversiones | Dashboard</title>
+    
+    <!-- Librerías de Interfaz -->
+    <script src="https://cdn.jsdelivr.net"></script>
     <script src="https://cdnjs.cloudflare.com"></script>
-    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+
     <style>
-        :root { --p: #27ae60; --s: #2c3e50; --bg: #f4f7f6; }
-        body { font-family: 'Segoe UI', sans-serif; background: var(--bg); margin: 0; padding: 20px; color: var(--s); }
+        :root { --p: #27ae60; --s: #2c3e50; --bg: #0b0f1a; --card: #161c2d; }
+        body { font-family: 'Segoe UI', sans-serif; background: var(--bg); color: white; margin: 0; padding: 20px; }
         .app-container { max-width: 500px; margin: auto; }
-        .card { background: white; border-radius: 20px; padding: 20px; box-shadow: 0 10px 20px rgba(0,0,0,0.05); margin-bottom: 20px; }
-        .balance-label { font-size: 0.9em; opacity: 0.7; }
-        .balance-amount { font-size: 2em; font-weight: bold; margin: 5px 0; }
-        .growth-badge { background: rgba(39,174,96,0.1); color: var(--p); padding: 5px 10px; border-radius: 20px; font-size: 0.8em; }
-        .btn { width: 100%; padding: 15px; border: none; border-radius: 12px; font-weight: bold; cursor: pointer; transition: 0.3s; margin-top: 10px; }
+        .card { background: var(--card); border-radius: 20px; padding: 20px; margin-bottom: 20px; border: 1px solid #2d3748; }
+        .balance-amount { font-size: 2.2em; font-weight: bold; color: var(--p); }
+        .btn { width: 100%; padding: 15px; border: none; border-radius: 12px; font-weight: bold; cursor: pointer; margin-top: 10px; transition: 0.3s; }
         .btn-buy { background: var(--p); color: white; }
-        .btn-sell { background: white; color: var(--s); border: 2px solid var(--s); }
-        input { width: 100%; padding: 12px; border: 1px solid #ddd; border-radius: 10px; margin: 10px 0; box-sizing: border-box; }
+        .btn-connect { background: #3182ce; color: white; margin-bottom: 20px; }
+        input { width: 100%; padding: 12px; border: 1px solid #2d3748; border-radius: 10px; margin: 10px 0; background: #0b0f1a; color: white; box-sizing: border-box; }
+        .roadmap-item { border-left: 2px solid var(--p); padding-left: 15px; margin-bottom: 10px; font-size: 0.85em; color: #a0aec0; }
     </style>
 </head>
 <body>
 
 <div class="app-container">
+    <!-- BOTÓN DE CONEXIÓN WALLETCONNECT -->
+    <div id="connect-root"></div>
+    <button class="btn btn-connect" id="btn-connect">CONECTAR WALLET</button>
+
     <div class="card">
-        <div class="balance-label">Valor de tu Inversión</div>
+        <div style="opacity: 0.7;">Valor de tu Inversión</div>
         <div class="balance-amount" id="userValue">$0.00</div>
-        <span class="growth-badge" id="growthText">+0.00% Total</span>
+        <span style="color: var(--p);">+12.5% Este mes</span>
     </div>
 
     <div class="card">
-        <canvas id="mainChart" height="200"></canvas>
+        <canvas id="mainChart" height="180"></canvas>
     </div>
 
     <div class="card">
-        <h3>Operar</h3>
-        <p style="font-size: 0.8em;">Precio Actual: <strong id="priceLabel">$0.00</strong></p>
-        <input type="number" id="amountInput" placeholder="Cantidad de Acciones">
-        <button class="btn btn-buy" onclick="operar('comprar')">Comprar Acciones</button>
-        <button class="btn btn-sell" onclick="operar('vender')">Vender al Broker</button>
+        <h3>Operar Acciones</h3>
+        <input type="number" id="amountInput" placeholder="Cantidad">
+        <button class="btn btn-buy" onclick="operar('comprar')">COMPRAR</button>
+        <button class="btn" style="background:transparent; border:1px solid #4a5568; color:white;" onclick="operar('vender')">VENDER AL BROKER</button>
     </div>
 
-    <div style="text-align: center;">
-        <a id="explorerLink" href="#" target="_blank" style="color: #999; font-size: 0.8em; text-decoration: none;">Ver Transacciones en Explorer ?</a>
+    <div class="card">
+        <h3>🚀 Roadmap 2024</h3>
+        <div class="roadmap-item"><strong>Q3:</strong> Staking de Acciones con interés compuesto.</div>
+        <div class="roadmap-item"><strong>Q4:</strong> Listado en Exchanges Descentralizados.</div>
+        <div class="roadmap-item" style="opacity:0.5;"><strong>2025:</strong> Tarjeta de Débito Tobar Corp.</div>
     </div>
 </div>
 
-<script>
-    // PARÁMETROS QUE DEBES EDITAR
+<!-- Lógica de WalletConnect y Contrato -->
+<script type="module">
+    import { createAppKit } from 'https://esm.sh'
+    import { Ethers5Adapter } from 'https://esm.sh-adapter-ethers5'
+    import { sepolia } from 'https://esm.sh/networks'
+
+    // CONFIGURACIÓN (Rellena tus datos)
+    const projectId = 'ed489f349c2d732a043fb4ee61405800'; 
     const BROKER_ADDR = "0x501870Af2320fC83EC0DD30048eBB5b598B5e1Ed";
-    const TOKEN_ADDR = "0x8B066E93aB5Da75B7F8131570fc94b61ebd04e52";
     const BROKER_ABI = [
-	{
-		"inputs": [
-			{
-				"internalType": "uint256",
-				"name": "_venta",
-				"type": "uint256"
-			},
-			{
-				"internalType": "uint256",
-				"name": "_recompra",
-				"type": "uint256"
-			}
-		],
-		"name": "ajustarPrecios",
-		"outputs": [],
-		"stateMutability": "nonpayable",
-		"type": "function"
-	},
-	{
-		"inputs": [
-			{
-				"internalType": "uint256",
-				"name": "cantidad",
-				"type": "uint256"
-			}
-		],
-		"name": "comprarAcciones",
-		"outputs": [],
-		"stateMutability": "nonpayable",
-		"type": "function"
-	},
-	{
-		"inputs": [
-			{
-				"internalType": "address",
-				"name": "_token",
-				"type": "address"
-			},
-			{
-				"internalType": "address",
-				"name": "_stable",
-				"type": "address"
-			}
-		],
-		"stateMutability": "nonpayable",
-		"type": "constructor"
-	},
-	{
-		"inputs": [
-			{
-				"internalType": "address",
-				"name": "owner",
-				"type": "address"
-			}
-		],
-		"name": "OwnableInvalidOwner",
-		"type": "error"
-	},
-	{
-		"inputs": [
-			{
-				"internalType": "address",
-				"name": "account",
-				"type": "address"
-			}
-		],
-		"name": "OwnableUnauthorizedAccount",
-		"type": "error"
-	},
-	{
-		"anonymous": false,
-		"inputs": [
-			{
-				"indexed": true,
-				"internalType": "address",
-				"name": "previousOwner",
-				"type": "address"
-			},
-			{
-				"indexed": true,
-				"internalType": "address",
-				"name": "newOwner",
-				"type": "address"
-			}
-		],
-		"name": "OwnershipTransferred",
-		"type": "event"
-	},
-	{
-		"inputs": [],
-		"name": "renounceOwnership",
-		"outputs": [],
-		"stateMutability": "nonpayable",
-		"type": "function"
-	},
-	{
-		"inputs": [
-			{
-				"internalType": "uint256",
-				"name": "cantidad",
-				"type": "uint256"
-			}
-		],
-		"name": "retirarFondos",
-		"outputs": [],
-		"stateMutability": "nonpayable",
-		"type": "function"
-	},
-	{
-		"inputs": [
-			{
-				"internalType": "uint256",
-				"name": "cantidad",
-				"type": "uint256"
-			}
-		],
-		"name": "retirarTokens",
-		"outputs": [],
-		"stateMutability": "nonpayable",
-		"type": "function"
-	},
-	{
-		"inputs": [
-			{
-				"internalType": "address",
-				"name": "newOwner",
-				"type": "address"
-			}
-		],
-		"name": "transferOwnership",
-		"outputs": [],
-		"stateMutability": "nonpayable",
-		"type": "function"
-	},
-	{
-		"inputs": [
-			{
-				"internalType": "uint256",
-				"name": "cantidad",
-				"type": "uint256"
-			}
-		],
-		"name": "venderAlBroker",
-		"outputs": [],
-		"stateMutability": "nonpayable",
-		"type": "function"
-	},
-	{
-		"inputs": [],
-		"name": "owner",
-		"outputs": [
-			{
-				"internalType": "address",
-				"name": "",
-				"type": "address"
-			}
-		],
-		"stateMutability": "view",
-		"type": "function"
-	},
-	{
-		"inputs": [],
-		"name": "precioRecompra",
-		"outputs": [
-			{
-				"internalType": "uint256",
-				"name": "",
-				"type": "uint256"
-			}
-		],
-		"stateMutability": "view",
-		"type": "function"
-	},
-	{
-		"inputs": [],
-		"name": "precioVenta",
-		"outputs": [
-			{
-				"internalType": "uint256",
-				"name": "",
-				"type": "uint256"
-			}
-		],
-		"stateMutability": "view",
-		"type": "function"
-	},
-	{
-		"inputs": [],
-		"name": "stablecoin",
-		"outputs": [
-			{
-				"internalType": "contract IERC20",
-				"name": "",
-				"type": "address"
-			}
-		],
-		"stateMutability": "view",
-		"type": "function"
-	},
-	{
-		"inputs": [],
-		"name": "tokenAccion",
-		"outputs": [
-			{
-				"internalType": "contract IERC20",
-				"name": "",
-				"type": "address"
-			}
-		],
-		"stateMutability": "view",
-		"type": "function"
-	}
-];
-	
-    let provider, signer, brokerContract;
+        "function comprarAcciones(uint256 cantidad)",
+        "function venderAlBroker(uint256 cantidad)",
+        "function precioRecompra() view returns (uint256)"
+    ];
 
-    async function init() {
-        if (window.ethereum) {
-            provider = new ethers.providers.Web3Provider(window.ethereum);
-            await provider.send("eth_requestAccounts", []);
-            signer = provider.getSigner();
-            brokerContract = new ethers.Contract(BROKER_ADDR, BROKER_ABI, signer);
-            loadDashboard();
-            renderChart();
+    // 1. Inicializar AppKit (WalletConnect)
+    const modal = createAppKit({
+        adapters: [new Ethers5Adapter()],
+        networks: [sepolia],
+        metadata: { name: 'Tobar Corp Inversiones', url: window.location.origin, icons: [] },
+        projectId
+    })
+
+    document.getElementById('btn-connect').onclick = () => modal.open();
+
+    // 2. Función de Operación
+    window.operar = async (tipo) => {
+        const cantidad = document.getElementById('amountInput').value;
+        if (!cantidad) return alert("Ingresa cantidad");
+
+        try {
+            const walletProvider = modal.getWalletProvider();
+            if (!walletProvider) return modal.open();
+
+            const provider = new ethers.providers.Web3Provider(walletProvider);
+            const signer = provider.getSigner();
+            const contrato = new ethers.Contract(BROKER_ADDR, BROKER_ABI, signer);
+
+            const montoWei = ethers.utils.parseEther(cantidad);
+            let tx;
+
+            if (tipo === 'comprar') {
+                tx = await contrato.comprarAcciones(montoWei);
+            } else {
+                tx = await contrato.venderAlBroker(montoWei);
+            }
+
+            alert("Firma enviada. Revisa tu billetera.");
+            await tx.wait();
+            alert("✅ Éxito");
+            location.reload();
+        } catch (e) {
+            alert("Error: " + (e.reason || e.message));
         }
     }
 
-    async function loadDashboard() {
-        const pRecompra = await brokerContract.precioRecompra();
-        const precioFriendly = ethers.utils.formatUnits(pRecompra, 18);
-        document.getElementById('priceLabel').innerText = `$${precioFriendly}`;
-        // Aquí añadirías la lógica para leer balance de tokens del usuario
-    }
-
-    function renderChart() {
-        const ctx = document.getElementById('mainChart').getContext('2d');
-        new Chart(ctx, {
-            type: 'line',
-            data: {
-                labels: ['Sem 1', 'Sem 2', 'Sem 3', 'Sem 4'],
-                datasets: [{
-                    data: [1.00, 1.05, 1.15, 1.20],
-                    borderColor: '#27ae60',
-                    tension: 0.4,
-                    fill: true,
-                    backgroundColor: 'rgba(39, 174, 96, 0.05)'
-                }]
-            },
-            options: { plugins: { legend: { display: false } } }
-        });
-    }
-
-	async function operar(tipo) {
-    // 1. Verificación de emergencia por si la librería falla al cargar
-    if (typeof ethers === 'undefined') {
-        alert("⚠️ Error Crítico: La librería Ethers no cargó. Revisa tu conexión o usa Chrome actualizado.");
-        return;
-    }
-
-    const cantidad = document.getElementById('amountInput').value;
-    if (!cantidad || cantidad <= 0) return alert("Ingresa una cantidad válida");
-
-    try {
-        document.getElementById('growthText').innerText = "⏳ PROCESANDO...";
-        
-        // Convertimos a unidades de 18 decimales (Wei)
-        const cantidadWei = ethers.utils.parseEther(cantidad.toString());
-
-        let tx;
-        if (tipo === 'comprar') {
-            status.innerText = "ESPERANDO FIRMA DE COMPRA...";
-            tx = await brokerContract.comprarAcciones(cantidadWei);
-        } else {
-            status.innerText = "ESPERANDO FIRMA DE VENTA...";
-            tx = await brokerContract.venderAlBroker(cantidadWei);
-        }
-
-        await tx.wait();
-        alert("✅ OPERACIÓN EXITOSA");
-        location.reload(); // Recarga para actualizar saldo
-
-    } catch (error) {
-        console.error(error);
-        document.getElementById('growthText').innerText = "❌ ERROR";
-        alert("FALLO: " + (error.reason || error.message || "Rechazado"));
-    }
-}
-
-// Esto asegura que el botón del HTML encuentre la función
-window.operar = operar;
-
-    window.onload = init;
+    // 3. Gráfico
+    const ctx = document.getElementById('mainChart').getContext('2d');
+    new Chart(ctx, {
+        type: 'line',
+        data: {
+            labels: ['Ene', 'Feb', 'Mar', 'Abr'],
+            datasets: [{ data: [100, 120, 115, 140], borderColor: '#27ae60', tension: 0.4, fill: true, backgroundColor: 'rgba(39,174,96,0.1)' }]
+        },
+        options: { plugins: { legend: { display: false } }, scales: { y: { display: false }, x: { grid: { display: false } } } }
+    });
 </script>
+
 </body>
 </html>
-
-
-
-
-
