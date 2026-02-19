@@ -5,7 +5,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Tobar Inversiones | Dashboard</title>
     
-    <!-- Librerías de Interfaz -->
+    <!-- Librerías de Interfaz (CORREGIDAS) -->
     <script src="https://cdn.jsdelivr.net"></script>
     <script src="https://cdnjs.cloudflare.com"></script>
 
@@ -17,22 +17,22 @@
         .balance-amount { font-size: 2.2em; font-weight: bold; color: var(--p); }
         .btn { width: 100%; padding: 15px; border: none; border-radius: 12px; font-weight: bold; cursor: pointer; margin-top: 10px; transition: 0.3s; }
         .btn-buy { background: var(--p); color: white; }
-        .btn-connect { background: #3182ce; color: white; margin-bottom: 20px; }
-        input { width: 100%; padding: 12px; border: 1px solid #2d3748; border-radius: 10px; margin: 10px 0; background: #0b0f1a; color: white; box-sizing: border-box; }
+        .btn-connect { background: #3182ce; color: white; margin-bottom: 20px; text-transform: uppercase; letter-spacing: 1px; }
+        input { width: 100%; padding: 12px; border: 1px solid #2d3748; border-radius: 10px; margin: 10px 0; background: #0b0f1a; color: white; box-sizing: border-box; text-align: center; font-size: 1.1em; }
         .roadmap-item { border-left: 2px solid var(--p); padding-left: 15px; margin-bottom: 10px; font-size: 0.85em; color: #a0aec0; }
+        #status-label { font-size: 0.7rem; color: #4a5568; margin-top: 10px; text-align: center; display: block; }
     </style>
 </head>
 <body>
 
 <div class="app-container">
-    <!-- BOTÓN DE CONEXIÓN WALLETCONNECT -->
-    <div id="connect-root"></div>
-    <button class="btn btn-connect" id="btn-connect">CONECTAR WALLET</button>
+    <button class="btn btn-connect" id="btn-connect">CONECTAR BILLETERA</button>
+    <span id="status-label">DESCONECTADO</span>
 
     <div class="card">
         <div style="opacity: 0.7;">Valor de tu Inversión</div>
         <div class="balance-amount" id="userValue">$0.00</div>
-        <span style="color: var(--p);">+12.5% Este mes</span>
+        <span id="token-balance" style="color: #4a5568; font-size: 0.8rem;">Acciones: 0.00</span>
     </div>
 
     <div class="card">
@@ -41,45 +41,70 @@
 
     <div class="card">
         <h3>Operar Acciones</h3>
-        <input type="number" id="amountInput" placeholder="Cantidad">
+        <input type="number" id="amountInput" placeholder="Cantidad de Acciones">
         <button class="btn btn-buy" onclick="operar('comprar')">COMPRAR</button>
         <button class="btn" style="background:transparent; border:1px solid #4a5568; color:white;" onclick="operar('vender')">VENDER AL BROKER</button>
     </div>
 
     <div class="card">
         <h3>🚀 Roadmap 2024</h3>
-        <div class="roadmap-item"><strong>Q3:</strong> Staking de Acciones con interés compuesto.</div>
-        <div class="roadmap-item"><strong>Q4:</strong> Listado en Exchanges Descentralizados.</div>
-        <div class="roadmap-item" style="opacity:0.5;"><strong>2025:</strong> Tarjeta de Débito Tobar Corp.</div>
+        <div class="roadmap-item"><strong>Q3:</strong> Staking de Acciones.</div>
+        <div class="roadmap-item"><strong>Q4:</strong> Listado en DEX.</div>
     </div>
 </div>
 
-<!-- Lógica de WalletConnect y Contrato -->
 <script type="module">
+    // IMPORTACIONES CORREGIDAS
     import { createAppKit } from 'https://esm.sh'
     import { Ethers5Adapter } from 'https://esm.sh-adapter-ethers5'
     import { sepolia } from 'https://esm.sh/networks'
 
-    // CONFIGURACIÓN (Rellena tus datos)
     const projectId = 'ed489f349c2d732a043fb4ee61405800'; 
     const BROKER_ADDR = "0x501870Af2320fC83EC0DD30048eBB5b598B5e1Ed";
-    const BROKER_ABI = [
-        "function comprarAcciones(uint256 cantidad)",
-        "function venderAlBroker(uint256 cantidad)",
-        "function precioRecompra() view returns (uint256)"
-    ];
+    const TOKEN_ADDR = "0x8B066E93aB5Da75B7F8131570fc94b61ebd04e52"; // Dirección de tu Token
 
-    // 1. Inicializar AppKit (WalletConnect)
     const modal = createAppKit({
         adapters: [new Ethers5Adapter()],
         networks: [sepolia],
-        metadata: { name: 'Tobar Corp Inversiones', url: window.location.origin, icons: [] },
+        metadata: { name: 'Tobar Inversiones', url: window.location.origin, icons: [] },
         projectId
     })
 
+    // Función para actualizar balance y UI
+    async function refreshUI() {
+        const address = modal.getAddress();
+        if (!address) return;
+
+        try {
+            const walletProvider = modal.getWalletProvider();
+            const provider = new ethers.providers.Web3Provider(walletProvider);
+            
+            // ABIs mínimos
+            const brokerContract = new ethers.Contract(BROKER_ADDR, ["function precioRecompra() view returns (uint256)"], provider);
+            const tokenContract = new ethers.Contract(TOKEN_ADDR, ["function balanceOf(address) view returns (uint256)"], provider);
+
+            const [precio, balance] = await Promise.all([
+                brokerContract.precioRecompra(),
+                tokenContract.balanceOf(address)
+            ]);
+
+            const pFriendly = parseFloat(ethers.utils.formatUnits(precio, 6)); // Ajusta si tu stable es 18
+            const bFriendly = parseFloat(ethers.utils.formatUnits(balance, 18));
+            
+            document.getElementById('userValue').innerText = `$${(pFriendly * bFriendly).toFixed(2)}`;
+            document.getElementById('token-balance').innerText = `Acciones: ${bFriendly.toFixed(2)} TCT`;
+            document.getElementById('btn-connect').innerText = address.substring(0,6) + "..." + address.substring(38);
+            document.getElementById('status-label').innerText = "CONECTADO A SEPOLIA";
+        } catch (e) { console.error(e); }
+    }
+
+    // Escuchar eventos de conexión
+    modal.subscribeEvents(state => {
+        if (state.data.event === 'CONNECT_SUCCESS') refreshUI();
+    });
+
     document.getElementById('btn-connect').onclick = () => modal.open();
 
-    // 2. Función de Operación
     window.operar = async (tipo) => {
         const cantidad = document.getElementById('amountInput').value;
         if (!cantidad) return alert("Ingresa cantidad");
@@ -90,27 +115,23 @@
 
             const provider = new ethers.providers.Web3Provider(walletProvider);
             const signer = provider.getSigner();
-            const contrato = new ethers.Contract(BROKER_ADDR, BROKER_ABI, signer);
+            const abi = [
+                "function comprarAcciones(uint256)",
+                "function venderAlBroker(uint256)"
+            ];
+            const contrato = new ethers.Contract(BROKER_ADDR, abi, signer);
 
             const montoWei = ethers.utils.parseEther(cantidad);
-            let tx;
+            let tx = (tipo === 'comprar') ? await contrato.comprarAcciones(montoWei) : await contrato.venderAlBroker(montoWei);
 
-            if (tipo === 'comprar') {
-                tx = await contrato.comprarAcciones(montoWei);
-            } else {
-                tx = await contrato.venderAlBroker(montoWei);
-            }
-
-            alert("Firma enviada. Revisa tu billetera.");
+            alert("Firma enviada. Esperando confirmación...");
             await tx.wait();
-            alert("✅ Éxito");
-            location.reload();
-        } catch (e) {
-            alert("Error: " + (e.reason || e.message));
-        }
+            alert("✅ ¡Transacción Exitosa!");
+            refreshUI();
+        } catch (e) { alert("Error: " + (e.reason || e.message)); }
     }
 
-    // 3. Gráfico
+    // Gráfico estético
     const ctx = document.getElementById('mainChart').getContext('2d');
     new Chart(ctx, {
         type: 'line',
@@ -120,7 +141,9 @@
         },
         options: { plugins: { legend: { display: false } }, scales: { y: { display: false }, x: { grid: { display: false } } } }
     });
-</script>
 
+    // Intentar carga inicial si ya está conectado
+    setTimeout(refreshUI, 2000);
+</script>
 </body>
 </html>
