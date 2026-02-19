@@ -2,14 +2,12 @@
 <html lang="es">
 <head>
     <meta charset="UTF-8">
-    <meta http-equiv="Content-Security-Policy" content="default-src 'self' https:; script-src 'self' 'unsafe-inline' 'unsafe-eval' https://cdnjs.cloudflare.com https://cdn.jsdelivr.net https://unpkg.com https://esm.sh; connect-src 'self' https://*.walletconnect.com https://*.walletconnect.org wss://*.walletconnect.org https://rpc.ankr.com https://eth-sepolia.g.alchemy.com; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; img-src 'self' data: https:; frame-src 'self' https://verify.walletconnect.com;">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Tobar Inversiones | Legacy Mode</title>
+    <title>Tobar Inversiones | App</title>
     
-    <!-- LIBRERÍAS CLÁSICAS (Compatibles con Win 7) -->
+    <!-- Librerías UMD Estables (Sin Redirects) -->
     <script src="https://cdnjs.cloudflare.com"></script>
     <script src="https://cdn.jsdelivr.net"></script>
-    <!-- Web3Modal Versión 2 (La más estable para HTML puro) -->
     <script src="https://cdn.jsdelivr.net"></script>
     <script src="https://cdn.jsdelivr.net"></script>
 
@@ -18,16 +16,16 @@
         body { font-family: sans-serif; background: var(--bg); color: white; margin: 0; padding: 20px; text-align: center; }
         .app-container { max-width: 450px; margin: auto; }
         .card { background: var(--card); border-radius: 20px; padding: 20px; margin-bottom: 20px; border: 1px solid #2d3748; }
-        .balance-amount { font-size: 2.2em; font-weight: bold; color: var(--p); }
-        .btn { width: 100%; padding: 15px; border: none; border-radius: 12px; font-weight: bold; cursor: pointer; margin-top: 10px; }
+        .balance-amount { font-size: 2.2em; font-weight: bold; color: var(--p); margin: 10px 0; }
+        .btn { width: 100%; padding: 15px; border: none; border-radius: 12px; font-weight: bold; cursor: pointer; margin-top: 10px; transition: 0.3s; }
         .btn-connect { background: #3182ce; color: white; margin-bottom: 20px; }
-        input { width: 100%; padding: 12px; border-radius: 10px; margin: 10px 0; background: #0b0f1a; color: white; border: 1px solid #2d3748; text-align: center; }
+        input { width: 100%; padding: 12px; border: 1px solid #2d3748; border-radius: 10px; margin: 10px 0; background: #0b0f1a; color: white; box-sizing: border-box; text-align: center; }
     </style>
 </head>
 <body>
 
 <div class="app-container">
-    <button class="btn btn-connect" id="btnConnect">CONECTAR BILLETERA</button>
+    <button class="btn btn-connect" id="btnConnect">CONECTAR WALLET</button>
 
     <div class="card">
         <div style="opacity: 0.7;">Valor de tu Inversión</div>
@@ -41,39 +39,55 @@
         <h3>Operar</h3>
         <input type="number" id="amountInput" placeholder="Cantidad TCT">
         <button class="btn" style="background:var(--p); color:white;" onclick="operar('comprar')">COMPRAR</button>
-        <button class="btn" style="background:transparent; border:1px solid #4a5568; color:white;" onclick="operar('vender')">VENDER</button>
+        <button class="btn" style="background:transparent; border:1px solid #4a5568; color:white;" onclick="operar('vender')">VENDER AL BROKER</button>
     </div>
 </div>
 
 <script>
-    // 1. CONFIGURACIÓN
     const projectId = 'ed489f349c2d732a043fb4ee61405800'; 
     const BROKER_ADDR = "0x501870Af2320fC83EC0DD30048eBB5b598B5e1Ed";
     const TOKEN_ADDR = "0x8B066E93aB5Da75B7F8131570fc94b61ebd04e52";
 
-    // Inicializar componentes (Método Global)
+    // Inicialización Web3Modal
     const { EthereumClient, w3mConnectors, w3mProvider } = Web3ModalEthereum;
     const { Web3Modal } = Web3ModalHtml;
 
     const chains = [{ chainId: 11155111, name: 'Sepolia' }];
-    
-    // Configuración de Wagmi (Interno de Web3Modal)
     const wagmiConfig = WagmiCore.createConfig({
         autoConnect: true,
         connectors: w3mConnectors({ projectId, chains }),
         publicClient: w3mProvider({ projectId })
     });
 
-    const ethereumClient = new EthereumClient(wagmiConfig, chains);
-    const web3Modal = new Web3Modal({ projectId }, ethereumClient);
+    const ethClient = new EthereumClient(wagmiConfig, chains);
+    const modal = new Web3Modal({ projectId }, ethClient);
 
-    // 2. FUNCIÓN OPERAR (Definida globalmente para evitar el error 'not defined')
-    window.operar = async function(tipo) {
-        const cant = document.getElementById('amountInput').value;
-        if(!cant) return alert("Ingresa cantidad");
-
+    // Función para actualizar Dashboard
+    async function refresh() {
         const account = WagmiCore.getAccount();
-        if (!account.isConnected) return web3Modal.openModal();
+        if (account.isConnected && window.ethers) {
+            try {
+                const provider = new ethers.providers.Web3Provider(await account.connector.getProvider());
+                const broker = new ethers.Contract(BROKER_ADDR, ["function precioRecompra() view returns (uint256)"], provider);
+                const token = new ethers.Contract(TOKEN_ADDR, ["function balanceOf(address) view returns (uint256)"], provider);
+
+                const [pRaw, bRaw] = await Promise.all([broker.precioRecompra(), token.balanceOf(account.address)]);
+                
+                const p = parseFloat(ethers.utils.formatUnits(pRaw, 6));
+                const b = parseFloat(ethers.utils.formatUnits(bRaw, 18));
+                
+                document.getElementById('userValue').innerText = `$${(p * b).toFixed(2)}`;
+                document.getElementById('tokenBalance').innerText = `Acciones: ${b.toFixed(2)} TCT`;
+                document.getElementById('btnConnect').innerText = "Wallet Conectada";
+            } catch (e) { console.log(e); }
+        }
+    }
+
+    // Lógica de Operación
+    window.operar = async (tipo) => {
+        const cant = document.getElementById('amountInput').value;
+        const account = WagmiCore.getAccount();
+        if (!account.isConnected) return modal.openModal();
 
         try {
             const provider = new ethers.providers.Web3Provider(await account.connector.getProvider());
@@ -82,55 +96,26 @@
                 "function comprarAcciones(uint256)", 
                 "function venderAlBroker(uint256)"
             ], signer);
-
+            
             const tx = (tipo === 'comprar') 
-                ? await contract.comprarAcciones(ethers.utils.parseEther(cant))
+                ? await contract.comprarAcciones(ethers.utils.parseEther(cant)) 
                 : await contract.venderAlBroker(ethers.utils.parseEther(cant));
             
-            alert("¡Firma enviada!");
+            alert("¡Firma enviada! Espera confirmación.");
             await tx.wait();
-            actualizarBalance();
-        } catch (e) {
-            alert("Error: " + (e.reason || e.message));
-        }
+            refresh();
+        } catch (e) { alert("Error: " + e.message); }
     };
 
-    // 3. ACTUALIZAR BALANCE
-    async function actualizarBalance() {
-        const account = WagmiCore.getAccount();
-        if (account.isConnected && window.ethers) {
-            try {
-                const provider = new ethers.providers.Web3Provider(await account.connector.getProvider());
-                const broker = new ethers.Contract(BROKER_ADDR, ["function precioRecompra() view returns (uint256)"], provider);
-                const token = new ethers.Contract(TOKEN_ADDR, ["function balanceOf(address) view returns (uint256)"], provider);
+    document.getElementById('btnConnect').onclick = () => modal.openModal();
+    WagmiCore.watchAccount(() => refresh());
 
-                const [precio, balance] = await Promise.all([
-                    broker.precioRecompra(), 
-                    token.balanceOf(account.address)
-                ]);
-
-                const p = parseFloat(ethers.utils.formatUnits(precio, 6));
-                const b = parseFloat(ethers.utils.formatUnits(balance, 18));
-
-                document.getElementById('userValue').innerText = `$${(p * b).toFixed(2)}`;
-                document.getElementById('tokenBalance').innerText = `Acciones: ${b.toFixed(2)} TCT`;
-                document.getElementById('btnConnect').innerText = "CONECTADO";
-            } catch (e) { console.log("Error balance:", e); }
-        }
-    }
-
-    document.getElementById('btnConnect').onclick = () => web3Modal.openModal();
-    
-    // Escuchar cambios de cuenta
-    WagmiCore.watchAccount(() => actualizarBalance());
-
-    // Gráfico
+    // Chart
     new Chart(document.getElementById('mainChart'), {
         type: 'line',
-        data: { labels: ['S1','S2','S3','S4'], datasets: [{ data: [1, 1.2, 1.1, 1.5], borderColor: '#27ae60', tension: 0.4 }] },
+        data: { labels: ['S1','S2','S3','S4'], datasets: [{ data: [1, 1.2, 1.1, 1.6], borderColor: '#27ae60', tension: 0.4 }] },
         options: { plugins: { legend: { display: false } } }
     });
 </script>
 </body>
 </html>
-
