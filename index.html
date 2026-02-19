@@ -2,122 +2,30 @@
 <html lang="es">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Tobar Corp | Dashboard Inversiones</title>
-    
-    <!-- Librería Ethers.js para comunicación con la Blockchain -->
-    <script src="https://cdnjs.cloudflare.com"></script>
-    <!-- Chart.js para el gráfico de crecimiento -->
-    <script src="https://cdn.jsdelivr.net"></script>
-
+    <title>Tobar Corp | Dashboard</title>
+    <script src="https://cdnjs.cloudflare.com" defer></script>
+    <script src="https://cdn.jsdelivr.net" defer></script>
+    <script src="app.js" defer></script>
     <style>
         :root { --p: #27ae60; --bg: #0b0f1a; --card: #161c2d; }
-        body { font-family: 'Segoe UI', sans-serif; background: var(--bg); color: white; margin: 0; padding: 20px; text-align: center; }
-        .app-container { max-width: 450px; margin: auto; }
+        body { font-family: sans-serif; background: var(--bg); color: white; text-align: center; padding: 20px; }
         .card { background: var(--card); border-radius: 20px; padding: 20px; margin-bottom: 20px; border: 1px solid #2d3748; }
-        .balance-amount { font-size: 2.2em; font-weight: bold; color: var(--p); margin: 10px 0; }
-        .btn { width: 100%; padding: 15px; border: none; border-radius: 12px; font-weight: bold; cursor: pointer; margin-top: 10px; }
-        .btn-connect { background: #3182ce; color: white; margin-bottom: 20px; }
-        input { width: 100%; padding: 12px; border: 1px solid #2d3748; border-radius: 10px; margin: 10px 0; background: #0b0f1a; color: white; box-sizing: border-box; text-align: center; }
+        .btn { width: 100%; padding: 15px; border-radius: 12px; font-weight: bold; cursor: pointer; border:none; margin-top:10px; }
+        input { width: 100%; padding: 12px; border-radius: 10px; background: #0b0f1a; color: white; border: 1px solid #2d3748; box-sizing: border-box; }
     </style>
 </head>
 <body>
-
-<div class="app-container">
-    <!-- Botón para conectar MetaMask / Trust Wallet Extension -->
-    <button class="btn btn-connect" id="btnConnect" onclick="conectarWallet()">CONECTAR BILLETERA</button>
-
-    <div class="card">
-        <div style="opacity: 0.7;">Valor de tu Inversión</div>
-        <div class="balance-amount" id="userValue">$0.00</div>
-        <div id="tokenBalance" style="font-size: 0.8em; color: #4a5568;">Acciones: 0.00 TCT</div>
+    <div style="max-width:450px; margin:auto;">
+        <button class="btn" id="btnConnect" style="background:#3182ce; color:white;">CONECTAR BILLETERA</button>
+        <div class="card">
+            <div id="userValue" style="font-size: 2em; color: var(--p); font-weight: bold;">$0.00</div>
+        </div>
+        <div class="card"><canvas id="mainChart"></canvas></div>
+        <div class="card">
+            <input type="number" id="amountInput" placeholder="Cantidad TCT">
+            <button class="btn" id="btnBuy" style="background:var(--p); color:white;">COMPRAR</button>
+            <button class="btn" id="btnSell" style="background:transparent; border:1px solid #4a5568; color:white;">VENDER</button>
+        </div>
     </div>
-
-    <div class="card"><canvas id="mainChart"></canvas></div>
-
-    <div class="card">
-        <h3>Operar Acciones</h3>
-        <input type="number" id="amountInput" placeholder="Cantidad TCT">
-        <button class="btn" style="background:var(--p); color:white;" onclick="operar('comprar')">COMPRAR</button>
-        <button class="btn" style="background:transparent; border:1px solid #4a5568; color:white;" onclick="operar('vender')">VENDER AL BROKER</button>
-    </div>
-</div>
-
-<script>
-    // CONFIGURACIÓN DEL CONTRATO
-    const BROKER_ADDR = "0x501870Af2320fC83EC0DD30048eBB5b598B5e1Ed";
-    const TOKEN_ADDR = "0x8B066E93aB5Da75B7F8131570fc94b61ebd04e52";
-    
-    let signer;
-    let brokerContract;
-
-    async function conectarWallet() {
-        if (typeof window.ethereum !== 'undefined') {
-            try {
-                // Solicitar conexión a la extensión del navegador (MetaMask/Trust Wallet)
-                const provider = new ethers.providers.Web3Provider(window.ethereum);
-                await provider.send("eth_requestAccounts", []);
-                signer = provider.getSigner();
-                
-                const address = await signer.getAddress();
-                document.getElementById('btnConnect').innerText = "Wallet: " + address.substring(0,6) + "...";
-                
-                // Inicializar contrato
-                const abi = [
-                    "function comprarAcciones(uint256)", 
-                    "function venderAlBroker(uint256)",
-                    "function precioRecompra() view returns (uint256)"
-                ];
-                brokerContract = new ethers.Contract(BROKER_ADDR, abi, signer);
-                
-                actualizarBalance();
-            } catch (error) {
-                console.error("Usuario rechazó la conexión", error);
-            }
-        } else {
-            alert("Por favor, instala la extensión de MetaMask o Trust Wallet en tu navegador Chrome.");
-        }
-    }
-
-    async function actualizarBalance() {
-        if (!brokerContract) return;
-        try {
-            const precioRaw = await brokerContract.precioRecompra();
-            // Suponiendo 6 decimales para el precio (USDT)
-            const precio = parseFloat(ethers.utils.formatUnits(precioRaw, 6));
-            
-            // Simulación de balance para la demo; aquí llamarías a tokenContract.balanceOf()
-            document.getElementById('userValue').innerText = "$" + (precio * 1.5).toFixed(2);
-        } catch (e) { console.log(e); }
-    }
-
-    async function operar(tipo) {
-        const cant = document.getElementById('amountInput').value;
-        if (!signer) return conectarWallet();
-        if (!cant) return alert("Ingresa una cantidad");
-
-        try {
-            const montoWei = ethers.utils.parseEther(cant);
-            let tx;
-            if (tipo === 'comprar') {
-                tx = await brokerContract.comprarAcciones(montoWei);
-            } else {
-                tx = await brokerContract.venderAlBroker(montoWei);
-            }
-            alert("Transacción enviada. Esperando confirmación...");
-            await tx.wait();
-            alert("¡Operación exitosa!");
-        } catch (e) {
-            alert("Error: " + (e.reason || e.message));
-        }
-    }
-
-    // Dibujar gráfico estático
-    new Chart(document.getElementById('mainChart'), {
-        type: 'line',
-        data: { labels: ['Sem 1','Sem 2','Sem 3','Sem 4'], datasets: [{ data: [1, 1.2, 1.1, 1.5], borderColor: '#27ae60', tension: 0.4 }] },
-        options: { plugins: { legend: { display: false } } }
-    });
-</script>
 </body>
 </html>
